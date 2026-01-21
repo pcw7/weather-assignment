@@ -4,16 +4,47 @@ import { useMemo, useState } from 'react';
 import { normalizeDistricts } from '@/entities/place/lib/normalizeDistricts';
 import { searchPlaces } from '@/entities/place/lib/searchPlaces';
 import { Place } from '@/entities/place/model/types';
+import { geocodeKR } from '@/shared/api/openweather-geocode';
+import { useWeatherByLatLon } from '@/entities/weather/api/queries';
 
 export default function SearchBox() {
     const places = useMemo(() => normalizeDistricts(), []);
+
     const [keyword, setKeyword] = useState('');
     const [selected, setSelected] = useState<Place | null>(null);
 
-    const results = useMemo(
-        () => searchPlaces(places, keyword, 20),
-        [places, keyword]
-    );
+    const [latlon, setLatlon] = useState<{ lat: number; lon: number } | null>(null);
+    const [geoLoading, setGeoLoading] = useState(false);
+    const [geoNoData, setGeoNoData] = useState(false);
+    const [geoError, setGeoError] = useState<string | null>(null);
+
+    const results = useMemo(() => searchPlaces(places, keyword, 20), [places, keyword]);
+    const weather = useWeatherByLatLon(latlon?.lat, latlon?.lon);
+
+    async function onSelect(place: Place) {
+        setSelected(place);
+        setLatlon(null);
+        setGeoNoData(false);
+        setGeoError(null);
+
+        setGeoLoading(true);
+        try {
+            const geo = await geocodeKR(place.name, 1);
+            if (geo.length === 0) {
+                setGeoNoData(true);
+                return;
+            }
+            setLatlon({ lat: geo[0].lat, lon: geo[0].lon });
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                setGeoError(e.message);
+            } else {
+                setGeoError('지오코딩 실패');
+            }
+        } finally {
+            setGeoLoading(false);
+        }
+    }
 
     return (
         <div className="w-full max-w-xl">
@@ -24,6 +55,9 @@ export default function SearchBox() {
                 onChange={(e) => {
                     setKeyword(e.target.value);
                     setSelected(null);
+                    setLatlon(null);
+                    setGeoNoData(false);
+                    setGeoError(null);
                 }}
             />
 
@@ -36,7 +70,7 @@ export default function SearchBox() {
                             <button
                                 key={p.id}
                                 className="block w-full px-3 py-2 text-left hover:bg-gray-50"
-                                onClick={() => setSelected(p)}
+                                onClick={() => onSelect(p)}
                             >
                                 {p.name}
                             </button>
@@ -46,9 +80,78 @@ export default function SearchBox() {
             )}
 
             {selected && (
-                <div className="mt-2 rounded-lg border p-3 text-sm">
-                    선택됨:
-                    <span className="ml-1 font-medium">{selected.name}</span>
+                <div className="mt-3 rounded-xl border p-4">
+                    <div className="text-base font-semibold">{selected.name}</div>
+
+                    {geoLoading && <div className="mt-2 text-sm text-gray-500">위치 확인 중...</div>}
+
+                    {geoNoData && (
+                        <div className="mt-2 text-sm text-gray-600">
+                            해당 장소의 정보가 제공되지 않습니다.
+                        </div>
+                    )}
+
+                    {geoError && <div className="mt-2 text-sm text-gray-600">{geoError}</div>}
+
+                    {/* {!!latlon && (
+                        <div className="mt-2 text-xs text-gray-500">
+                            좌표: {latlon.lat.toFixed(4)}, {latlon.lon.toFixed(4)}
+                        </div>
+                    )} */}
+
+                    {!!latlon && (
+                        <div className="mt-4">
+                            {weather.isLoading ? (
+                                <div className="text-sm text-gray-500">날씨 불러오는 중...</div>
+                            ) : weather.isError ? (
+                                <div className="text-sm text-gray-600">날씨를 불러오지 못했습니다.</div>
+                            ) : weather.data ? (
+                                <div>
+                                    <div className="flex items-end justify-between">
+                                        <div className="text-4xl font-bold">
+                                            현재 기온 : {Math.round(weather.data.currentTemp)}°C
+                                        </div>
+                                        <div className="text-sm text-gray-700">
+                                            최저 {weather.data.todayMin == null ? '-' : Math.round(weather.data.todayMin)}°C / 최고{' '}
+                                            {weather.data.todayMax == null ? '-' : Math.round(weather.data.todayMax)}°C
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            flexDirection: 'row',
+                                            flexWrap: 'nowrap',
+                                            gap: 8,
+                                            overflowX: 'auto',
+                                            paddingBottom: 4,
+                                        }}
+                                    >
+                                        {weather.data.hourly.map((h: { dt: number; temp: number }) => (
+                                            <div
+                                                key={h.dt}
+                                                style={{
+                                                    minWidth: 72,
+                                                    flex: '0 0 auto',
+                                                    border: '1px solid #ddd',
+                                                    borderRadius: 8,
+                                                    padding: 8,
+                                                    textAlign: 'center',
+                                                }}
+                                            >
+                                                <div style={{ fontSize: 12, color: '#666' }}>
+                                                    {new Date(h.dt * 1000).getHours()}시
+                                                </div>
+                                                <div style={{ marginTop: 4, fontSize: 16, fontWeight: 600 }}>
+                                                    {Math.round(h.temp)}°C
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
