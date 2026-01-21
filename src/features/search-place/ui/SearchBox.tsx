@@ -20,6 +20,7 @@ export default function SearchBox() {
     const [initialLocLoading, setInitialLocLoading] = useState(true);
     const [initialLocError, setInitialLocError] = useState<string | null>(null);
     const [didInitLocation, setDidInitLocation] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
 
     const results = useMemo(() => searchPlaces(places, keyword, 20), [places, keyword]);
     const weather = useWeatherByLatLon(latlon?.lat, latlon?.lon);
@@ -70,6 +71,7 @@ export default function SearchBox() {
     }, [didInitLocation]);
 
     async function onSelect(place: Place) {
+        setIsOpen(false);
         setSelected(place);
         setLatlon(null);
         setGeoNoData(false);
@@ -102,7 +104,7 @@ export default function SearchBox() {
                 value={keyword}
                 onChange={(e) => {
                     setKeyword(e.target.value);
-                    setSelected(null);
+                    setIsOpen(true);
                     setLatlon(null);
                     setGeoNoData(false);
                     setGeoError(null);
@@ -118,20 +120,24 @@ export default function SearchBox() {
                 </div>
             )}
 
-            {!!keyword && !selected && (
-                <div className="mt-2 max-h-72 overflow-auto rounded-lg border">
+            {!!keyword && isOpen && (
+                <div className="mt-2 max-h-72 overflow-auto rounded-lg border bg-white shadow-sm">
                     {results.length === 0 ? (
                         <div className="p-3 text-sm text-gray-500">검색 결과가 없습니다.</div>
                     ) : (
-                        results.map((p) => (
-                            <button
-                                key={p.id}
-                                className="block w-full px-3 py-2 text-left hover:bg-gray-50"
-                                onClick={() => onSelect(p)}
-                            >
-                                {p.name}
-                            </button>
-                        ))
+                        <ul className="flex flex-col">
+                            {results.map((p) => (
+                                <div key={p.id} className="border-b last:border-b-0">
+                                    <button
+                                        type="button"
+                                        className="w-full px-3 py-2 text-left hover:bg-gray-50"
+                                        onClick={() => onSelect(p)}
+                                    >
+                                        {String(p.name)}
+                                    </button>
+                                </div>
+                            ))}
+                        </ul>
                     )}
                 </div>
             )}
