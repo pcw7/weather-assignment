@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { normalizeDistricts } from '@/entities/place/lib/normalizeDistricts';
 import { searchPlaces } from '@/entities/place/lib/searchPlaces';
 import { Place } from '@/entities/place/model/types';
-import { geocodeKR } from '@/shared/api/openweather-geocode';
+import { geocodeKR, reverseGeocodeKR } from '@/shared/api/openweather-geocode';
 import { useWeatherByLatLon } from '@/entities/weather/api/queries';
 
 export default function SearchBox() {
@@ -17,9 +17,57 @@ export default function SearchBox() {
     const [geoLoading, setGeoLoading] = useState(false);
     const [geoNoData, setGeoNoData] = useState(false);
     const [geoError, setGeoError] = useState<string | null>(null);
+    const [initialLocLoading, setInitialLocLoading] = useState(true);
+    const [initialLocError, setInitialLocError] = useState<string | null>(null);
+    const [didInitLocation, setDidInitLocation] = useState(false);
 
     const results = useMemo(() => searchPlaces(places, keyword, 20), [places, keyword]);
     const weather = useWeatherByLatLon(latlon?.lat, latlon?.lon);
+
+    useEffect(() => {
+        if (didInitLocation) return;
+        setDidInitLocation(true);
+
+        if (!navigator.geolocation) {
+            setInitialLocError('이 브라우저는 위치 기능을 지원하지 않습니다.');
+            setInitialLocLoading(false);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const { latitude, longitude } = pos.coords;
+
+                setLatlon({ lat: latitude, lon: longitude });
+
+                try {
+                    const rev = await reverseGeocodeKR(latitude, longitude, 1);
+
+                    if (rev.length > 0) {
+                        const item = rev[0];
+                        const koName = item.local_names?.ko ?? item.name;
+                        const name = `${koName}${item.state ? `, ${item.state}` : ''}`;
+                        setSelected({ id: 'me', name } as Place);
+                    } else {
+                        setSelected({ id: 'me', name: '현재 위치' } as Place);
+                    }
+                } catch {
+                    setSelected({ id: 'me', name: '현재 위치' } as Place);
+                } finally {
+                    setInitialLocLoading(false);
+                }
+            },
+            (err) => {
+                setInitialLocError(err.message || '위치 정보를 가져오지 못했습니다.');
+                setInitialLocLoading(false);
+            },
+            {
+                enableHighAccuracy: false,
+                timeout: 8000,
+                maximumAge: 60_000,
+            }
+        );
+    }, [didInitLocation]);
 
     async function onSelect(place: Place) {
         setSelected(place);
@@ -60,6 +108,15 @@ export default function SearchBox() {
                     setGeoError(null);
                 }}
             />
+
+            {initialLocLoading && (
+                <div className="mb-2 text-sm text-gray-500">현재 위치 확인 중...</div>
+            )}
+            {initialLocError && (
+                <div className="mb-2 text-sm text-gray-600">
+                    현재 위치를 사용할 수 없습니다. ({initialLocError})
+                </div>
+            )}
 
             {!!keyword && !selected && (
                 <div className="mt-2 max-h-72 overflow-auto rounded-lg border">
