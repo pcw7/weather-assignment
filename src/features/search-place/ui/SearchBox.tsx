@@ -6,6 +6,9 @@ import { searchPlaces } from '@/entities/place/lib/searchPlaces';
 import { Place } from '@/entities/place/model/types';
 import { geocodeKR, reverseGeocodeKR } from '@/shared/api/openweather-geocode';
 import { useWeatherByLatLon } from '@/entities/weather/api/queries';
+import { useFavorites } from '@/entities/favorite/model/useFavorites';
+import type { FavoritePlace } from '@/entities/favorite/model/types';
+import { StarIcon } from '@/shared/ui/icon/StarIcon';
 
 export default function SearchBox() {
     const places = useMemo(() => normalizeDistricts(), []);
@@ -21,6 +24,7 @@ export default function SearchBox() {
     const [initialLocError, setInitialLocError] = useState<string | null>(null);
     const [didInitLocation, setDidInitLocation] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
+    const { isFavorite, addFavorite, removeFavorite, error: favError } = useFavorites();
 
     const results = useMemo(() => searchPlaces(places, keyword, 20), [places, keyword]);
     const weather = useWeatherByLatLon(latlon?.lat, latlon?.lon);
@@ -96,6 +100,32 @@ export default function SearchBox() {
         }
     }
 
+    async function onToggleFavorite(place: Place) {
+        if (isFavorite(place.id)) {
+            removeFavorite(place.id);
+            return;
+        }
+
+        try {
+            const geo = await geocodeKR(place.name, 1);
+            if (geo.length === 0) {
+                setGeoNoData(true);
+                return;
+            }
+
+            const item: FavoritePlace = {
+                ...place,
+                lat: geo[0].lat,
+                lon: geo[0].lon,
+                alias: undefined,
+            };
+
+            addFavorite(item);
+        } catch (e) {
+            setGeoError(e instanceof Error ? e.message : '즐겨찾기 추가 실패');
+        }
+    }
+
     return (
         <div className="w-full max-w-xl">
             <input
@@ -126,22 +156,41 @@ export default function SearchBox() {
                         <div className="p-3 text-sm text-gray-500">검색 결과가 없습니다.</div>
                     ) : (
                         <ul className="flex flex-col">
-                            {results.map((p) => (
-                                <div key={p.id} className="border-b last:border-b-0">
-                                    <button
-                                        type="button"
-                                        className="w-full px-3 py-2 text-left hover:bg-gray-50"
-                                        onClick={() => onSelect(p)}
-                                    >
-                                        {String(p.name)}
-                                    </button>
-                                </div>
-                            ))}
+                            {results.map((p) => {
+                                const fav = isFavorite(p.id);
+
+                                return (
+                                    <li key={p.id} className="border-b last:border-b-0">
+                                        <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50">
+                                            <button
+                                                type="button"
+                                                className="flex-1 text-left"
+                                                onClick={() => onSelect(p)}
+                                            >
+                                                {String(p.name)}
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="shrink-0 rounded p-1 hover:bg-white"
+                                                aria-label={fav ? '즐겨찾기 제거' : '즐겨찾기 추가'}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onToggleFavorite(p);
+                                                }}
+                                            >
+                                                <StarIcon filled={fav} />
+                                            </button>
+                                        </div>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     )}
                 </div>
             )}
 
+            {favError && <div className="mt-2 text-sm text-red-500">{favError}</div>}
             {selected && (
                 <div className="mt-3 rounded-xl border p-4">
                     <div className="text-base font-semibold">{selected.name}</div>
