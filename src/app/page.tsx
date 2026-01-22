@@ -1,4 +1,5 @@
 import SearchBox from '@/features/search-place/ui/SearchBox';
+import FavoritesList from '@/features/favorites/ui/FavoritesList';
 
 export default function HomePage() {
   return (
@@ -8,6 +9,8 @@ export default function HomePage() {
       <section className="mt-6">
         <SearchBox />
       </section>
+
+      <FavoritesList />
     </main>
   );
 }

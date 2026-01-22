@@ -6,7 +6,7 @@ import { searchPlaces } from '@/entities/place/lib/searchPlaces';
 import { Place } from '@/entities/place/model/types';
 import { geocodeKR, reverseGeocodeKR } from '@/shared/api/openweather-geocode';
 import { useWeatherByLatLon } from '@/entities/weather/api/queries';
-import { useFavorites } from '@/entities/favorite/model/useFavorites';
+import { useFavorites } from '@/entities/favorite/model/FavoriteProvider';
 import type { FavoritePlace } from '@/entities/favorite/model/types';
 import { StarIcon } from '@/shared/ui/icon/StarIcon';
 
@@ -155,7 +155,7 @@ export default function SearchBox() {
                     {results.length === 0 ? (
                         <div className="p-3 text-sm text-gray-500">검색 결과가 없습니다.</div>
                     ) : (
-                        <ul className="flex flex-col">
+                        <div className="flex flex-col">
                             {results.map((p) => {
                                 const fav = isFavorite(p.id);
 
@@ -185,7 +185,7 @@ export default function SearchBox() {
                                     </li>
                                 );
                             })}
-                        </ul>
+                        </div>
                     )}
                 </div>
             )}
