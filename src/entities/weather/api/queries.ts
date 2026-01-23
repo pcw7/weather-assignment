@@ -5,6 +5,16 @@ export const weatherKeys = {
     byLatLon: (lat: number, lon: number) => ['weather', 'byLatLon', lat, lon] as const,
 };
 
+type ForecastItem = {
+    dt: number;
+    main: { temp: number };
+};
+
+type ForecastResponse = {
+    city?: { timezone?: number };
+    list?: ForecastItem[];
+};
+
 function toLocalDateKey(dtSec: number, tzShiftSec: number) {
     const ms = (dtSec + tzShiftSec) * 1000;
     const d = new Date(ms);
@@ -19,28 +29,30 @@ export function useWeatherByLatLon(lat?: number, lon?: number) {
         queryKey: lat != null && lon != null ? weatherKeys.byLatLon(lat, lon) : ['weather', 'disabled'],
         enabled: lat != null && lon != null,
         queryFn: async () => {
-            const [current, forecast] = await Promise.all([
+            const [current, forecastRaw] = await Promise.all([
                 fetchCurrentWeather(lat!, lon!),
                 fetchForecast(lat!, lon!),
             ]);
+
+            const forecast = forecastRaw as ForecastResponse;
 
             const tz = forecast.city?.timezone ?? 0;
 
             const firstDt = forecast.list?.[0]?.dt;
             const baseKey = firstDt != null ? toLocalDateKey(firstDt, tz) : null;
 
-            const baseList = baseKey
-                ? (forecast.list ?? []).filter((x) => toLocalDateKey(x.dt, tz) === baseKey)
+            const baseList: ForecastItem[] = baseKey
+                ? (forecast.list ?? []).filter((x: ForecastItem) => toLocalDateKey(x.dt, tz) === baseKey)
                 : [];
 
-            const temps = baseList.map((x) => x.main.temp);
+            const temps = baseList.map((x: ForecastItem) => x.main.temp);
             const min = temps.length ? Math.min(...temps) : null;
             const max = temps.length ? Math.max(...temps) : null;
 
-            const hourly = (forecast.list ?? []).slice(0, 8).map((x: any) => ({
+            const hourly = (forecast.list ?? []).slice(0, 8).map((x: ForecastItem) => ({
                 dt: x.dt,
-                temp: x.main?.temp,
-            })); // 3시간 간격 24시간치(8개)
+                temp: x.main.temp,
+            }));
 
             return {
                 currentTemp: current.main?.temp,
