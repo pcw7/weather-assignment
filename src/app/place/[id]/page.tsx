@@ -148,7 +148,7 @@ export default function PlaceDetailPage() {
                         <div className="text-sm text-gray-600">날씨를 불러오지 못했습니다.</div>
                     ) : weather.data ? (
                         <div>
-                            <div className="flex items-end justify-between gap-3">
+                            <div className="flex items-end justify-between gap-3 mb-3">
                                 <div className="text-4xl font-bold">
                                     현재 기온 : {Math.round(weather.data.currentTemp)}°C
                                 </div>

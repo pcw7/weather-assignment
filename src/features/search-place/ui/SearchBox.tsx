@@ -113,8 +113,9 @@ export default function SearchBox() {
 
         try {
             const geo = await geocodeKR(place.name, 1);
+
             if (geo.length === 0) {
-                setGeoNoData(true);
+                alert('해당 장소의 날씨 정보를 찾을 수 없어서 즐겨찾기에 추가할 수 없습니다.');
                 return;
             }
 
@@ -127,7 +128,11 @@ export default function SearchBox() {
 
             addFavorite(item);
         } catch (e) {
-            setGeoError(e instanceof Error ? e.message : '즐겨찾기 추가 실패');
+            alert(
+                e instanceof Error
+                    ? `즐겨찾기 추가 실패: ${e.message}`
+                    : '즐겨찾기 추가 중 오류가 발생했습니다.'
+            );
         }
     }
 
@@ -223,7 +228,7 @@ export default function SearchBox() {
                                 <div className="text-sm text-gray-600">날씨를 불러오지 못했습니다.</div>
                             ) : weather.data ? (
                                 <div>
-                                    <div className="flex items-end justify-between">
+                                    <div className="flex items-end justify-between mb-3">
                                         <div className="text-4xl font-bold">
                                             현재 기온 : {Math.round(weather.data.currentTemp)}°C
                                         </div>
