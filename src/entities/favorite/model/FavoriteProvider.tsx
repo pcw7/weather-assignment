@@ -5,7 +5,6 @@ import {
     useContext,
     useEffect,
     useMemo,
-    useRef,
     useState,
     type ReactNode,
 } from 'react';
@@ -24,8 +23,7 @@ type FavoritesContextValue = {
 
 const FavoritesContext = createContext<FavoritesContextValue | null>(null);
 
-function loadFavorites(): FavoritePlace[] {
-    if (typeof window === 'undefined') return [];
+function loadFavoritesFromStorage(): FavoritePlace[] {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         const parsed = JSON.parse(raw ?? '[]');
@@ -36,54 +34,40 @@ function loadFavorites(): FavoritePlace[] {
 }
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
-    const [favorites, setFavorites] = useState<FavoritePlace[]>(() => loadFavorites());
+    const [favorites, setFavorites] = useState<FavoritePlace[]>([]);
     const [error, setError] = useState<string | null>(null);
 
-    const didMountRef = useRef(false);
+    useEffect(() => {
+        setFavorites(loadFavoritesFromStorage());
+    }, []);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-
-        if (!didMountRef.current) {
-            didMountRef.current = true;
-            return;
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+        } catch {
+            // ignore
         }
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
     }, [favorites]);
 
-    const ids = useMemo(() => new Set(favorites.map((f) => f.id)), [favorites]);
+    const value = useMemo<FavoritesContextValue>(() => {
+        const isFavorite = (id: string) => favorites.some((f) => f.id === id);
 
-    const isFavorite = (id: string) => ids.has(id);
+        const addFavorite = (item: FavoritePlace) => {
+            setFavorites((prev) => (prev.some((f) => f.id === item.id) ? prev : [item, ...prev]));
+        };
 
-    const addFavorite = (item: FavoritePlace) => {
-        setError(null);
-        setFavorites((prev) => {
-            if (prev.some((f) => f.id === item.id)) return prev;
-            if (prev.length >= 6) {
-                setError('즐겨찾기는 최대 6개까지 추가할 수 있습니다.');
-                return prev;
-            }
-            return [...prev, item];
-        });
-    };
+        const removeFavorite = (id: string) => {
+            setFavorites((prev) => prev.filter((f) => f.id !== id));
+        };
 
-    const removeFavorite = (id: string) => {
-        setFavorites((prev) => prev.filter((f) => f.id !== id));
-    };
+        const renameFavorite = (id: string, alias: string) => {
+            setFavorites((prev) =>
+                prev.map((f) => (f.id === id ? { ...f, alias } : f))
+            );
+        };
 
-    const renameFavorite = (id: string, alias: string) => {
-        setFavorites((prev) => prev.map((f) => (f.id === id ? { ...f, alias } : f)));
-    };
-
-    const value: FavoritesContextValue = {
-        favorites,
-        error,
-        isFavorite,
-        addFavorite,
-        removeFavorite,
-        renameFavorite,
-    };
+        return { favorites, error, isFavorite, addFavorite, removeFavorite, renameFavorite };
+    }, [favorites, error]);
 
     return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
 }
