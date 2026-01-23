@@ -9,6 +9,7 @@ import { useWeatherByLatLon } from '@/entities/weather/api/queries';
 import { useFavorites } from '@/entities/favorite/model/FavoriteProvider';
 import type { FavoritePlace } from '@/entities/favorite/model/types';
 import { StarIcon } from '@/shared/ui/icon/StarIcon';
+import { formatKoAmPmHour } from '@/shared/lib/formatTime';
 
 export default function SearchBox() {
     const places = useMemo(() => normalizeDistricts(), []);
@@ -131,7 +132,7 @@ export default function SearchBox() {
     }
 
     return (
-        <div className="w-full max-w-xl">
+        <div>
             <input
                 className="w-full rounded-lg border px-3 py-2"
                 placeholder="예: 서울특별시, 종로구, 청운동"
@@ -233,32 +234,16 @@ export default function SearchBox() {
                                         </div>
                                     </div>
 
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'row',
-                                            flexWrap: 'nowrap',
-                                            gap: 8,
-                                            overflowX: 'auto',
-                                            paddingBottom: 4,
-                                        }}
-                                    >
+                                    <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
                                         {weather.data.hourly.map((h: { dt: number; temp: number }) => (
                                             <div
                                                 key={h.dt}
-                                                style={{
-                                                    minWidth: 72,
-                                                    flex: '0 0 auto',
-                                                    border: '1px solid #ddd',
-                                                    borderRadius: 8,
-                                                    padding: 8,
-                                                    textAlign: 'center',
-                                                }}
+                                                className="min-w-[72px] flex-none rounded-lg border p-2 text-center"
                                             >
-                                                <div style={{ fontSize: 12, color: '#666' }}>
-                                                    {new Date(h.dt * 1000).getHours()}시
+                                                <div className="text-xs text-gray-500">
+                                                    {formatKoAmPmHour(h.dt)}
                                                 </div>
-                                                <div style={{ marginTop: 4, fontSize: 16, fontWeight: 600 }}>
+                                                <div className="mt-1 text-base font-semibold">
                                                     {Math.round(h.temp)}°C
                                                 </div>
                                             </div>

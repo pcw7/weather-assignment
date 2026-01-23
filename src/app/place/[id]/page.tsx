@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useFavorites } from '@/entities/favorite/model/FavoriteProvider';
 import { useWeatherByLatLon } from '@/entities/weather/api/queries';
 import { StarIcon } from '@/shared/ui/icon/StarIcon';
+import { formatKoAmPmHour } from '@/shared/lib/formatTime';
 
 export default function PlaceDetailPage() {
     const params = useParams<{ id: string }>();
@@ -157,33 +158,16 @@ export default function PlaceDetailPage() {
                                 </div>
                             </div>
 
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    flexWrap: 'nowrap',
-                                    gap: 8,
-                                    overflowX: 'auto',
-                                    paddingBottom: 4,
-                                    marginTop: 12,
-                                }}
-                            >
+                            <div className="mt-3 flex flex-nowrap gap-2 overflow-x-auto pb-1">
                                 {weather.data.hourly.map((h: { dt: number; temp: number }) => (
                                     <div
                                         key={h.dt}
-                                        style={{
-                                            minWidth: 72,
-                                            flex: '0 0 auto',
-                                            border: '1px solid #ddd',
-                                            borderRadius: 8,
-                                            padding: 8,
-                                            textAlign: 'center',
-                                        }}
+                                        className="min-w-[72px] flex-none rounded-lg border p-2 text-center"
                                     >
-                                        <div style={{ fontSize: 12, color: '#666' }}>
-                                            {new Date(h.dt * 1000).getHours()}시
+                                        <div className="text-xs text-gray-500">
+                                            {formatKoAmPmHour(h.dt)}
                                         </div>
-                                        <div style={{ marginTop: 4, fontSize: 16, fontWeight: 600 }}>
+                                        <div className="mt-1 text-base font-semibold">
                                             {Math.round(h.temp)}°C
                                         </div>
                                     </div>
