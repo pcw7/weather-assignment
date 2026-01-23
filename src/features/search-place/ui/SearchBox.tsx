@@ -24,10 +24,14 @@ export default function SearchBox() {
     const [initialLocError, setInitialLocError] = useState<string | null>(null);
     const [didInitLocation, setDidInitLocation] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
-    const { isFavorite, addFavorite, removeFavorite, error: favError } = useFavorites();
+    const { favorites, isFavorite, addFavorite, removeFavorite, error: favError } = useFavorites();
 
-    const results = useMemo(() => searchPlaces(places, keyword, 20), [places, keyword]);
     const weather = useWeatherByLatLon(latlon?.lat, latlon?.lon);
+
+    const searchPool = useMemo(() => {
+        return [...favorites, ...places];
+    }, [favorites, places]);
+    const results = useMemo(() => searchPlaces(searchPool, keyword, 20), [searchPool, keyword]);
 
     useEffect(() => {
         if (didInitLocation) return;
