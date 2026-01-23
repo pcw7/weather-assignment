@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFavorites } from '@/entities/favorite/model/FavoriteProvider';
 import { useWeatherByLatLon } from '@/entities/weather/api/queries';
@@ -11,7 +11,7 @@ export default function PlaceDetailPage() {
     const router = useRouter();
     const id = useMemo(() => decodeURIComponent(params.id), [params.id]);
 
-    const { favorites, isFavorite, addFavorite, removeFavorite } = useFavorites();
+    const { favorites, isFavorite, addFavorite, removeFavorite, renameFavorite } = useFavorites();
 
     const fav = useMemo(() => favorites.find((f) => f.id === id) ?? null, [favorites, id]);
 
@@ -19,6 +19,15 @@ export default function PlaceDetailPage() {
     const lon = fav?.lon ?? null;
 
     const weather = useWeatherByLatLon(lat ?? undefined, lon ?? undefined);
+
+    const [editingAlias, setEditingAlias] = useState(false);
+    const [alias, setAlias] = useState('');
+
+    useEffect(() => {
+        if (!fav) return;
+        setAlias(fav.alias ?? '');
+        setEditingAlias(false);
+    }, [fav?.id]);
 
     if (!fav) {
         return (
@@ -44,13 +53,23 @@ export default function PlaceDetailPage() {
 
     function onToggleFavorite() {
         if (!fav) return;
-
         if (isFavorite(fav.id)) {
             removeFavorite(fav.id);
             return;
         }
-
         addFavorite(fav);
+    }
+
+    function onSaveAlias() {
+        if (!fav) return;
+        renameFavorite(fav.id, alias.trim());
+        setEditingAlias(false);
+    }
+
+    function onCancelAlias() {
+        if (!fav) return;
+        setAlias(fav.alias ?? '');
+        setEditingAlias(false);
     }
 
     return (
@@ -66,18 +85,60 @@ export default function PlaceDetailPage() {
                 <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                         <div className="truncate text-base font-semibold">{title}</div>
-                        {fav.alias?.trim() && <div className="truncate text-xs text-gray-500">{fav.name}</div>}
+                        {fav.alias?.trim() && (
+                            <div className="truncate text-xs text-gray-500">{fav.name}</div>
+                        )}
                     </div>
 
-                    <button
-                        type="button"
-                        className="shrink-0 rounded p-1 hover:bg-gray-50"
-                        aria-label={isFavorite(fav.id) ? '즐겨찾기 제거' : '즐겨찾기 추가'}
-                        onClick={onToggleFavorite}
-                    >
-                        <StarIcon filled={isFavorite(fav.id)} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            className="rounded-lg border px-2 py-1 text-xs hover:bg-gray-50"
+                            onClick={() => setEditingAlias((v) => !v)}
+                        >
+                            별칭
+                        </button>
+
+                        <button
+                            type="button"
+                            className="shrink-0 rounded p-1 hover:bg-gray-50"
+                            aria-label={isFavorite(fav.id) ? '즐겨찾기 제거' : '즐겨찾기 추가'}
+                            onClick={onToggleFavorite}
+                        >
+                            <StarIcon filled={isFavorite(fav.id)} />
+                        </button>
+                    </div>
                 </div>
+
+                {editingAlias && (
+                    <div className="mt-3 flex items-center gap-2">
+                        <input
+                            className="w-full rounded-lg border px-3 py-2 text-sm"
+                            placeholder="별칭(예: 우리집, 회사)"
+                            value={alias}
+                            onChange={(e) => setAlias(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') onSaveAlias();
+                                if (e.key === 'Escape') onCancelAlias();
+                            }}
+                            autoFocus
+                        />
+                        <button
+                            type="button"
+                            className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+                            onClick={onSaveAlias}
+                        >
+                            저장
+                        </button>
+                        <button
+                            type="button"
+                            className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+                            onClick={onCancelAlias}
+                        >
+                            취소
+                        </button>
+                    </div>
+                )}
 
                 <div className="mt-4">
                     {weather.isLoading ? (
@@ -91,8 +152,8 @@ export default function PlaceDetailPage() {
                                     현재 기온 : {Math.round(weather.data.currentTemp)}°C
                                 </div>
                                 <div className="text-sm text-gray-700">
-                                    최저 {weather.data.todayMin == null ? '-' : Math.round(weather.data.todayMin)}°C / 최고{' '}
-                                    {weather.data.todayMax == null ? '-' : Math.round(weather.data.todayMax)}°C
+                                    최저 {weather.data.todayMin == null ? '-' : Math.round(weather.data.todayMin)}°C /
+                                    최고 {weather.data.todayMax == null ? '-' : Math.round(weather.data.todayMax)}°C
                                 </div>
                             </div>
 
@@ -104,6 +165,7 @@ export default function PlaceDetailPage() {
                                     gap: 8,
                                     overflowX: 'auto',
                                     paddingBottom: 4,
+                                    marginTop: 12,
                                 }}
                             >
                                 {weather.data.hourly.map((h: { dt: number; temp: number }) => (
