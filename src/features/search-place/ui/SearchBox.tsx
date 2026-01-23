@@ -242,7 +242,7 @@ export default function SearchBox() {
                                         {weather.data.hourly.map((h: { dt: number; temp: number }) => (
                                             <div
                                                 key={h.dt}
-                                                className="min-w-[72px] flex-none rounded-lg border p-2 text-center"
+                                                className="min-w-[72px] flex-none rounded-lg border border-gray-400 p-2 text-center"
                                             >
                                                 <div className="text-xs text-gray-500">
                                                     {formatKoAmPmHour(h.dt)}
