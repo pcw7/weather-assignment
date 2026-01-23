@@ -4,6 +4,7 @@ import type { FavoritePlace } from '@/entities/favorite/model/types';
 import { useFavorites } from '@/entities/favorite/model/FavoriteProvider';
 import { useWeatherByLatLon } from '@/entities/weather/api/queries';
 import Link from 'next/link';
+import { StarIcon } from '@/shared/ui/icon/StarIcon';
 
 function FavoriteCard({ fav }: { fav: FavoritePlace }) {
     const weather = useWeatherByLatLon(fav.lat, fav.lon);
@@ -12,7 +13,7 @@ function FavoriteCard({ fav }: { fav: FavoritePlace }) {
     return (
         <Link
             href={`/place/${encodeURIComponent(fav.id)}`}
-            className="block rounded-xl border p-4 hover:bg-gray-50"
+            className="block rounded-xl border border-gray-400 p-4 hover:bg-gray-50"
         >
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -55,7 +56,10 @@ export default function FavoritesList() {
 
     return (
         <section className="mt-6">
-            <div className="mb-2 text-lg font-semibold">즐겨찾기</div>
+            <div className="mb-2 flex items-center gap-2 text-lg font-semibold">
+                <StarIcon filled />
+                <span>즐겨찾기</span>
+            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {favorites.map((fav) => (
                     <FavoriteCard key={fav.id} fav={fav} />
