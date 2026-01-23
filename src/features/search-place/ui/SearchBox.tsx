@@ -140,7 +140,6 @@ export default function SearchBox() {
                 onChange={(e) => {
                     setKeyword(e.target.value);
                     setIsOpen(true);
-                    setLatlon(null);
                     setGeoNoData(false);
                     setGeoError(null);
                 }}
