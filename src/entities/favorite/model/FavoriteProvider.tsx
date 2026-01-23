@@ -11,6 +11,7 @@ import {
 import type { FavoritePlace } from './types';
 
 const STORAGE_KEY = 'weather:favorites:v2';
+const MAX_FAVORITES = 6;
 
 type FavoritesContextValue = {
     favorites: FavoritePlace[];
@@ -52,8 +53,22 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     const value = useMemo<FavoritesContextValue>(() => {
         const isFavorite = (id: string) => favorites.some((f) => f.id === id);
 
+
         const addFavorite = (item: FavoritePlace) => {
-            setFavorites((prev) => (prev.some((f) => f.id === item.id) ? prev : [item, ...prev]));
+            setFavorites((prev) => {
+                if (prev.some((f) => f.id === item.id)) {
+                    setError(null);
+                    return prev;
+                }
+
+                if (prev.length >= MAX_FAVORITES) {
+                    setError(`즐겨찾기는 최대 ${MAX_FAVORITES}개까지 추가할 수 있어요.`);
+                    return prev;
+                }
+
+                setError(null);
+                return [item, ...prev];
+            });
         };
 
         const removeFavorite = (id: string) => {
